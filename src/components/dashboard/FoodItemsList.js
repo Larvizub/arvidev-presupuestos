@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { FaPlus, FaTrash, FaEdit, FaSave, FaTimes, FaRegSquare, FaCheckSquare } from 'react-icons/fa';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 const Container = styled.div`
   margin-top: 15px;
@@ -126,6 +127,7 @@ const ItemCheckbox = styled.div`
 `;
 
 const FoodItemsList = ({ items = [], onChange }) => {
+  const { formatCurrency } = useCurrency();
   const [newItem, setNewItem] = useState({ name: '', quantity: 1, price: '', isPaid: false });
   const [editingItem, setEditingItem] = useState(null);
   const [editValues, setEditValues] = useState({});
@@ -310,7 +312,7 @@ const FoodItemsList = ({ items = [], onChange }) => {
                   
                   <ItemName>{item.name}</ItemName>
                   <ItemQuantity>x{item.quantity}</ItemQuantity>
-                  <ItemPrice>${(item.quantity * item.price).toFixed(2)}</ItemPrice>
+                  <ItemPrice>{formatCurrency(item.quantity * item.price)}</ItemPrice>
                   <ItemAction>
                     <Button onClick={() => startEditing(item)}>
                       <FaEdit />
@@ -375,11 +377,11 @@ const FoodItemsList = ({ items = [], onChange }) => {
       <TotalRow>
         <div>
           <span>Total por pagar:</span>
-          <span style={{ marginLeft: '10px', color: '#e74c3c', fontWeight: 'bold' }}>${totalAmount.toFixed(2)}</span>
+          <span style={{ marginLeft: '10px', color: '#e74c3c', fontWeight: 'bold' }}>{formatCurrency(totalAmount)}</span>
         </div>
         <div>
           <span>Pagado:</span>
-          <span style={{ marginLeft: '10px', color: '#2ecc71' }}>${paidAmount.toFixed(2)}</span>
+          <span style={{ marginLeft: '10px', color: '#2ecc71' }}>{formatCurrency(paidAmount)}</span>
         </div>
       </TotalRow>
       

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCurrency, CURRENCIES } from '../contexts/CurrencyContext';
 import styled from 'styled-components';
-import { FaUser, FaSave } from 'react-icons/fa';
+import { FaUser, FaGlobeAmericas } from 'react-icons/fa';
 
 const SettingsContainer = styled.div`
   padding: 20px;
@@ -58,35 +59,29 @@ const Input = styled.input`
   }
 `;
 
-const Button = styled.button`
-  background-color: #3498db;
-  color: white;
-  border: none;
+const Select = styled.select`
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
   border-radius: 5px;
-  padding: 12px 20px;
   font-size: 16px;
+  background-color: white;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  transition: background-color 0.3s;
   
-  &:hover {
-    background-color: #2980b9;
-  }
-  
-  &:disabled {
-    background-color: #bdc3c7;
-    cursor: not-allowed;
+  &:focus {
+    border-color: #3498db;
+    outline: none;
   }
 `;
 
 export default function Settings() {
   const { currentUser } = useAuth();
+  const { currency, setCurrency } = useCurrency();
   const [profileData, setProfileData] = useState({
     name: '',
     email: ''
   });
+  const [selectedCurrency, setSelectedCurrency] = useState(currency.code);
   
   // Cargar datos del usuario actual
   useEffect(() => {
@@ -97,6 +92,16 @@ export default function Settings() {
       });
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    setSelectedCurrency(currency.code);
+  }, [currency]);
+
+  const handleCurrencyChange = (e) => {
+    const newCode = e.target.value;
+    setSelectedCurrency(newCode);
+    setCurrency(newCode);
+  };
   
   return (
     <SettingsContainer>
@@ -127,11 +132,24 @@ export default function Settings() {
               readOnly
             />
           </FormGroup>
-          
-          <Button type="button">
-            <FaSave /> Guardar Cambios
-          </Button>
         </form>
+      </Card>
+
+      <Card>
+        <CardTitle>
+          <FaGlobeAmericas /> Preferencias Regionales
+        </CardTitle>
+        
+        <FormGroup>
+          <Label>Moneda / País</Label>
+          <Select value={selectedCurrency} onChange={handleCurrencyChange}>
+            {CURRENCIES.map(c => (
+              <option key={c.code} value={c.code}>
+                {c.name} ({c.symbol})
+              </option>
+            ))}
+          </Select>
+        </FormGroup>
       </Card>
     </SettingsContainer>
   );

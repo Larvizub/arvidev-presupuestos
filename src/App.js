@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { CurrencyProvider } from './contexts/CurrencyContext';
 import PrivateRoute from './components/layout/PrivateRoute';
 import AdminRoute from './components/layout/AdminRoute';
 import Navigation from './components/layout/Navigation';
@@ -47,68 +48,70 @@ function App() {
     <Router>
       <AuthProvider>
         <NotificationProvider>
-          <GlobalStyle />
-          <AppContainer>
-            <Navigation />
-            <MainContent>
-              <Suspense fallback={<div>Cargando...</div>}>
-                <Routes>
-                  <Route 
-                    path="/" 
-                    element={<Navigate to="/login" replace />} 
-                  />
-                  <Route 
-                    path="/login" 
-                    element={<Login />} 
-                  />
-                  <Route 
-                    path="/signup" 
-                    element={<Signup />} 
-                  />
-                  <Route 
-                    path="/dashboard" 
-                    element={
-                      <PrivateRoute>
-                        <Dashboard />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route 
-                    path="/shared" 
-                    element={
-                      <PrivateRoute>
-                        <SharedBudgets />
-                      </PrivateRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/users" 
-                    element={
-                      <AdminRoute>
-                        <Users />
-                      </AdminRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/roles" 
-                    element={
-                      <AdminRoute>
-                        <Roles />
-                      </AdminRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/settings" 
-                    element={
-                      <PrivateRoute>
-                        <Settings />
-                      </PrivateRoute>
-                    } 
-                  />
-                </Routes>
-              </Suspense>
-            </MainContent>
-          </AppContainer>
+          <CurrencyProvider>
+            <GlobalStyle />
+            <AppContainer>
+              <Navigation />
+              <MainContent>
+                <Suspense fallback={<div>Cargando...</div>}>
+                  <Routes>
+                    <Route 
+                      path="/" 
+                      element={<Navigate to="/login" replace />} 
+                    />
+                    <Route 
+                      path="/login" 
+                      element={<Login />} 
+                    />
+                    <Route 
+                      path="/signup" 
+                      element={<Signup />} 
+                    />
+                    <Route 
+                      path="/dashboard" 
+                      element={
+                        <PrivateRoute>
+                          <Dashboard />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route 
+                      path="/shared" 
+                      element={
+                        <PrivateRoute>
+                          <SharedBudgets />
+                        </PrivateRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/users" 
+                      element={
+                        <AdminRoute>
+                          <Users />
+                        </AdminRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/roles" 
+                      element={
+                        <AdminRoute>
+                          <Roles />
+                        </AdminRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/settings" 
+                      element={
+                        <PrivateRoute>
+                          <Settings />
+                        </PrivateRoute>
+                      } 
+                    />
+                  </Routes>
+                </Suspense>
+              </MainContent>
+            </AppContainer>
+          </CurrencyProvider>
         </NotificationProvider>
       </AuthProvider>
     </Router>

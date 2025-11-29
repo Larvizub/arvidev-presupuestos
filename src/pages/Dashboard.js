@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { getUserBudgets, deleteBudget } from '../services/budgetService';
 import { getBudgetTransactions, deleteTransaction } from '../services/transactionService';
@@ -94,9 +95,15 @@ const CardTitle = styled.h3`
 `;
 
 const CardValue = styled.div`
-  font-size: 2.2rem;
+  font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.5px;
+  word-break: break-word;
+  line-height: 1.2;
+  
+  @media (max-width: 768px) {
+    font-size: 1.8rem;
+  }
 `;
 
 const BudgetGrid = styled.div`
@@ -142,30 +149,39 @@ const BudgetContent = styled.div`
 
 const BudgetStats = styled.div`
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 12px;
   margin-bottom: 20px;
+  background-color: #f8fafc;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
 `;
 
 const BudgetStat = styled.div`
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 const StatLabel = styled.div`
   color: #64748b;
   font-size: 0.9rem;
-  margin-bottom: 5px;
+  font-weight: 500;
 `;
 
 const StatValue = styled.div`
-  font-size: 1.4rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: ${props => props.color || '#1e293b'};
+  text-align: right;
 `;
 
 const ButtonRow = styled.div`
   display: flex;
   gap: 10px;
   margin-top: 15px;
+  flex-wrap: wrap;
 `;
 
 const Button = styled.button`
@@ -181,6 +197,9 @@ const Button = styled.button`
   align-items: center;
   gap: 6px;
   transition: all 0.2s ease;
+  flex: 1;
+  justify-content: center;
+  white-space: nowrap;
   
   &:hover {
     background-color: ${props => props.bgHover || '#e2e8f0'};
@@ -208,6 +227,7 @@ const EmptyStateMessage = styled.p`
 
 export default function Dashboard() {
   const { currentUser } = useAuth();
+  const { formatCurrency } = useCurrency();
   const { showAlert, showConfirm } = useNotification();
   const [budgets, setBudgets] = useState([]);
   const [transactions, setTransactions] = useState({});
@@ -486,15 +506,15 @@ export default function Dashboard() {
       <SummaryCards>
         <SummaryCard gradient="linear-gradient(135deg, #3498db, #2980b9)">
           <CardTitle><FaWallet /> Balance Total</CardTitle>
-          <CardValue>${totalBalance.toFixed(2)}</CardValue>
+          <CardValue>{formatCurrency(totalBalance)}</CardValue>
         </SummaryCard>
         <SummaryCard gradient="linear-gradient(135deg, #2ecc71, #27ae60)">
           <CardTitle><FaArrowUp /> Ingresos Totales</CardTitle>
-          <CardValue>${totalIncome.toFixed(2)}</CardValue>
+          <CardValue>{formatCurrency(totalIncome)}</CardValue>
         </SummaryCard>
         <SummaryCard gradient="linear-gradient(135deg, #e74c3c, #c0392b)">
           <CardTitle><FaArrowDown /> Gastos Totales</CardTitle>
-          <CardValue>${totalExpenses.toFixed(2)}</CardValue>
+          <CardValue>{formatCurrency(totalExpenses)}</CardValue>
         </SummaryCard>
       </SummaryCards>
       
@@ -542,16 +562,16 @@ export default function Dashboard() {
                       <BudgetStat>
                         <StatLabel>Balance</StatLabel>
                         <StatValue color={balance >= 0 ? '#2ecc71' : '#e74c3c'}>
-                          ${Math.abs(balance).toFixed(2)}
+                          {formatCurrency(Math.abs(balance))}
                         </StatValue>
                       </BudgetStat>
                       <BudgetStat>
                         <StatLabel>Ingresos</StatLabel>
-                        <StatValue color="#2ecc71">${income.toFixed(2)}</StatValue>
+                        <StatValue color="#2ecc71">{formatCurrency(income)}</StatValue>
                       </BudgetStat>
                       <BudgetStat>
                         <StatLabel>Gastos</StatLabel>
-                        <StatValue color="#e74c3c">${expenses.toFixed(2)}</StatValue>
+                        <StatValue color="#e74c3c">{formatCurrency(expenses)}</StatValue>
                       </BudgetStat>
                     </BudgetStats>
                     

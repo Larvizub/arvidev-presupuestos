@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { FaEdit, FaTrash, FaArrowUp, FaArrowDown, FaShoppingCart, FaCheckCircle } from 'react-icons/fa';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 const TransactionsContainer = styled.div`
   background-color: white;
@@ -108,6 +109,8 @@ const TransactionCategory = styled.span`
 `;
 
 function TransactionList({ transactions, onEdit, onDelete }) {
+  const { formatCurrency } = useCurrency();
+  
   // Ordenar transacciones por fecha más reciente
   const sortedTransactions = [...transactions].sort((a, b) => 
     new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)
@@ -185,7 +188,7 @@ function TransactionList({ transactions, onEdit, onDelete }) {
                 <td>
                   <TransactionAmount type={transaction.type}>
                     {transaction.type === 'income' ? <FaArrowUp /> : <FaArrowDown />}
-                    ${transaction.amount.toFixed(2)}
+                    {formatCurrency(transaction.amount)}
                   </TransactionAmount>
                 </td>
                 <td>
