@@ -2,98 +2,149 @@ import React from 'react';
 import styled from 'styled-components';
 import { FaCalendarAlt } from 'react-icons/fa';
 
-const Container = styled.div`
-  position: relative;
-  width: 100%;
+const Wrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
 `;
 
-const StyledInput = styled.input`
-  width: 100%;
-  padding: 14px 16px;
-  padding-left: 44px; /* Espacio para el icono */
-  border: 1px solid #e1e5eb;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  background-color: #f8fafc;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  color: #2c3e50;
-  font-family: inherit;
-  appearance: none;
-  
-  /* Estilos para el placeholder/texto cuando está vacío o lleno */
-  &::-webkit-datetime-edit {
-    padding: 0;
-  }
-  
-  &:focus {
-    border-color: ${props => props.focusColor || '#3498db'};
-    background-color: white;
-    box-shadow: 0 0 0 3px ${props => props.focusShadow || 'rgba(52, 152, 219, 0.2)'};
-    outline: none;
-  }
-
-  /* Hacer que el calendario nativo ocupe todo el input para mejor experiencia táctil */
-  &::-webkit-calendar-picker-indicator {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-  }
-`;
-
-const IconWrapper = styled.div`
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
+const Icon = styled.div`
   color: #64748b;
-  pointer-events: none;
-  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
 `;
 
-const DatePicker = ({ 
-  value, 
-  onChange, 
-  name, 
-  required, 
-  focusColor, 
-  focusShadow, 
-  placeholder,
+const Input = styled.input`
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e1e5eb;
+  border-radius: 8px;
+  font-size: 16px;
+  background-color: #f8fafc;
+  color: #1e293b;
+  transition: all 0.2s ease;
+
+  &:focus {
+    border-color: ${props => props.isIncome ? '#2ecc71' : '#e74c3c'};
+    background-color: white;
+    box-shadow: 0 0 0 3px ${props => props.isIncome ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)'};
+    outline: none;
+  }
+
+  @media (max-width: 480px) {
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+`;
+
+function formatDateToYYYYMM(date) {
+  if (!date) return '';
+  const d = (date instanceof Date) ? date : new Date(date);
+  if (isNaN(d)) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+function formatDateToYYYYMMDD(date) {
+  if (!date) return '';
+  const d = (date instanceof Date) ? date : new Date(date);
+  if (isNaN(d)) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export default function DatePicker({
+  name,
+  value,
+  onChange,
   min,
   max,
-  disabled,
-  ...props 
-}) => {
+  required = false,
+  disabled = false,
+  isIncome = false,
+  mode = 'date', // 'date' | 'month-year'
+  yearRange = null,
+  placeholder = ''
+}) {
+  if (mode === 'month-year') {
+    // value may be Date or string
+    const inputValue = value instanceof Date ? formatDateToYYYYMM(value) : (typeof value === 'string' ? (value.length >= 7 ? value.slice(0,7) : value) : '');
+
+    // compute min/max from yearRange if provided
+    let minAttr = min || '';
+    let maxAttr = max || '';
+    if (yearRange && typeof yearRange === 'object') {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      if (yearRange.past !== undefined) {
+        minAttr = `${currentYear - Number(yearRange.past)}-01`;
+      }
+      if (yearRange.future !== undefined) {
+        maxAttr = `${currentYear + Number(yearRange.future)}-12`;
+      }
+    }
+
+    const handleChange = (e) => {
+      const val = e.target.value; // 'YYYY-MM'
+      if (!val) {
+        if (onChange) onChange(null);
+        return;
+      }
+      const [y, m] = val.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, 1);
+      if (onChange) onChange(dateObj);
+    };
+
+    return (
+      <Wrapper>
+        <Icon aria-hidden><FaCalendarAlt /></Icon>
+        <Input
+          type="month"
+          name={name}
+          value={inputValue}
+          onChange={handleChange}
+          min={minAttr}
+          max={maxAttr}
+          required={required}
+          disabled={disabled}
+          isIncome={isIncome}
+          aria-label={name}
+          placeholder={placeholder}
+        />
+      </Wrapper>
+    );
+  }
+
+  // default: date mode (YYYY-MM-DD), keep onChange as event-like to preserve existing handlers
+  const inputValue = value instanceof Date ? formatDateToYYYYMMDD(value) : (typeof value === 'string' ? value : '');
+
+  const handleDateChange = (e) => {
+    const val = e.target.value; // 'YYYY-MM-DD'
+    if (!onChange) return;
+    // preserve compatibility: if parent expects event-like (has target.name), forward event-like
+    onChange({ target: { name, value: val } });
+  };
+
   return (
-    <Container className={props.className}>
-      <IconWrapper>
-        <FaCalendarAlt />
-      </IconWrapper>
-      <StyledInput
+    <Wrapper>
+      <Icon aria-hidden><FaCalendarAlt /></Icon>
+      <Input
         type="date"
         name={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        focusColor={focusColor}
-        focusShadow={focusShadow}
-        placeholder={placeholder}
+        value={inputValue}
+        onChange={handleDateChange}
         min={min}
         max={max}
+        required={required}
         disabled={disabled}
-        {...props}
+        isIncome={isIncome}
+        aria-label={name}
+        placeholder={placeholder}
       />
-    </Container>
+    </Wrapper>
   );
-};
-
-export default DatePicker;
+}
