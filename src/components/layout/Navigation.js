@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import styled from 'styled-components';
-import { FaHome, FaUserFriends, FaCog, FaSignOutAlt } from 'react-icons/fa';
+import { FaHome, FaUserFriends, FaCog, FaSignOutAlt, FaUsers, FaUserShield } from 'react-icons/fa';
 
 const NavContainer = styled.nav`
   background-color: #2c3e50;
@@ -132,6 +132,20 @@ export default function Navigation() {
           <FaUserFriends />
           <span>Compartidos</span>
         </NavLink>
+        
+        {currentUser.role === 'admin' && (
+          <>
+            <NavLink to="/users" active={location.pathname === '/users' ? 1 : 0}>
+              <FaUsers />
+              <span>Usuarios</span>
+            </NavLink>
+            <NavLink to="/roles" active={location.pathname === '/roles' ? 1 : 0}>
+              <FaUserShield />
+              <span>Roles</span>
+            </NavLink>
+          </>
+        )}
+
         <NavLink to="/settings" active={location.pathname === '/settings' ? 1 : 0}>
           <FaCog />
           <span>Configuración</span>

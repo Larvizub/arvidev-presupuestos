@@ -44,6 +44,7 @@ export function AuthProvider({ children }) {
       await set(ref(database, `users/${userCredential.user.uid}`), {
         email: userCredential.user.email,
         displayName: displayName || '',
+        role: 'user',
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString()
       });
@@ -203,12 +204,19 @@ export function AuthProvider({ children }) {
   
   // Monitorear cambios en la autenticación
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      setCurrentUser(user);
-      setLoading(false);
-      
-      // Configurar refresco periódico de token (cada 55 minutos)
+    const unsubscribe = onAuthStateChanged(auth, async user => {
       if (user) {
+        try {
+          const snapshot = await get(ref(database, `users/${user.uid}/role`));
+          const role = snapshot.exists() ? snapshot.val() : 'user';
+          user.role = role;
+        } catch (error) {
+          console.error("Error fetching user role:", error);
+          user.role = 'user';
+        }
+        setCurrentUser(user);
+        
+        // Configurar refresco periódico de token (cada 55 minutos)
         const interval = setInterval(async () => {
           try {
             await user.getIdToken(true);
@@ -219,7 +227,10 @@ export function AuthProvider({ children }) {
         }, 55 * 60 * 1000); // 55 minutos
         
         setTokenRefreshInterval(interval);
+      } else {
+        setCurrentUser(null);
       }
+      setLoading(false);
     });
     
     return unsubscribe;

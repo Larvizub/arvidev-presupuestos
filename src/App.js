@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import PrivateRoute from './components/layout/PrivateRoute';
+import AdminRoute from './components/layout/AdminRoute';
 import Navigation from './components/layout/Navigation';
 import styled, { createGlobalStyle } from 'styled-components';
 
@@ -12,6 +13,8 @@ const Signup = lazy(() => import('./components/auth/Signup'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const SharedBudgets = lazy(() => import('./pages/SharedBudgets'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Users = lazy(() => import('./pages/Users'));
+const Roles = lazy(() => import('./pages/Roles'));
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -68,7 +71,7 @@ function App() {
                       <PrivateRoute>
                         <Dashboard />
                       </PrivateRoute>
-                    } 
+                    }
                   />
                   <Route 
                     path="/shared" 
@@ -76,6 +79,22 @@ function App() {
                       <PrivateRoute>
                         <SharedBudgets />
                       </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/users" 
+                    element={
+                      <AdminRoute>
+                        <Users />
+                      </AdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/roles" 
+                    element={
+                      <AdminRoute>
+                        <Roles />
+                      </AdminRoute>
                     } 
                   />
                   <Route 
