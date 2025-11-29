@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import { FaSave, FaTimes, FaArrowUp, FaArrowDown, FaCalendarAlt, FaTag, FaAlignLeft, FaWallet, FaShoppingCart } from 'react-icons/fa';
 import FoodItemsList from './FoodItemsList';
 import { useNotification } from '../../contexts/NotificationContext';
+import DatePicker from '../common/DatePicker';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 const Form = styled.form`
@@ -596,13 +597,13 @@ export default function TransactionForm({
       
       <FormGroup>
         <Label><FaCalendarAlt /> Fecha</Label>
-        <Input
-          type="date"
+        <DatePicker
           name="date"
           value={formData.date}
           onChange={handleChange}
           required
-          isIncome={formData.type === 'income'}
+          focusColor={formData.type === 'income' ? '#2ecc71' : '#e74c3c'}
+          focusShadow={formData.type === 'income' ? 'rgba(46, 204, 113, 0.2)' : 'rgba(231, 76, 60, 0.2)'}
         />
       </FormGroup>
       

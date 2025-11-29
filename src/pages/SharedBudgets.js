@@ -5,7 +5,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { getUserBudgets } from '../services/budgetService';
 import { getBudgetTransactions } from '../services/transactionService';
 import styled from 'styled-components';
-import { FaUserFriends, FaWallet, FaArrowUp, FaArrowDown, FaInfoCircle } from 'react-icons/fa';
+import { FaUserFriends, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import Modal from '../components/common/Modal';
 import TransactionForm from '../components/dashboard/TransactionForm';
 import TransactionList from '../components/dashboard/TransactionList';
