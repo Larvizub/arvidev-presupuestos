@@ -123,6 +123,15 @@ const ButtonGroup = styled.div`
   justify-content: flex-end;
   gap: 12px;
   margin-top: 15px;
+  
+  @media (max-width: 480px) {
+    flex-direction: column-reverse;
+    
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 `;
 
 const Button = styled.button`

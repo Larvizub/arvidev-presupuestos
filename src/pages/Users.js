@@ -24,6 +24,62 @@ const UserTable = styled.table`
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const MobileUserList = styled.div`
+  display: none;
+  
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+`;
+
+const UserCard = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const UserCardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 10px;
+  margin-bottom: 5px;
+`;
+
+const UserCardName = styled.h3`
+  margin: 0;
+  font-size: 1.1rem;
+  color: #2c3e50;
+`;
+
+const UserCardRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+`;
+
+const Label = styled.span`
+  color: #64748b;
+  font-weight: 500;
+`;
+
+const Value = styled.span`
+  color: #2c3e50;
+  font-weight: 500;
 `;
 
 const Th = styled.th`
@@ -119,6 +175,12 @@ export default function Users() {
     }
   };
 
+  const getDisplayName = (user) => {
+    if (user.displayName) return user.displayName;
+    if (user.id === currentUser.uid && currentUser.displayName) return currentUser.displayName;
+    return 'Sin nombre';
+  };
+
   if (loading) return <LoadingSpinner />;
 
   return (
@@ -138,7 +200,7 @@ export default function Users() {
         <tbody>
           {users.map(user => (
             <tr key={user.id}>
-              <Td>{user.displayName || 'Sin nombre'}</Td>
+              <Td>{getDisplayName(user)}</Td>
               <Td>{user.email}</Td>
               <Td>
                 <Badge role={user.role || 'user'}>
@@ -159,6 +221,37 @@ export default function Users() {
           ))}
         </tbody>
       </UserTable>
+
+      <MobileUserList>
+        {users.map(user => (
+          <UserCard key={user.id}>
+            <UserCardHeader>
+              <UserCardName>{getDisplayName(user)}</UserCardName>
+              <Badge role={user.role || 'user'}>
+                {user.role === 'admin' ? 'Admin' : 'User'}
+              </Badge>
+            </UserCardHeader>
+            
+            <UserCardRow>
+              <Label>Email:</Label>
+              <Value>{user.email}</Value>
+            </UserCardRow>
+            
+            <UserCardRow>
+              <Label>Rol:</Label>
+              <Select 
+                value={user.role || 'user'} 
+                onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                disabled={user.id === currentUser.uid}
+                style={{ padding: '6px', fontSize: '0.9rem' }}
+              >
+                <option value="user">Usuario</option>
+                <option value="admin">Administrador</option>
+              </Select>
+            </UserCardRow>
+          </UserCard>
+        ))}
+      </MobileUserList>
 
       <AlertModal 
         show={alert.show}

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { createBudget } from '../../services/budgetService';
+import { createBudget, updateBudget } from '../../services/budgetService';
 import styled from 'styled-components';
 import { FaSave, FaTimes, FaMoneyBillWave, FaCalendarAlt } from 'react-icons/fa';
 
@@ -50,6 +50,15 @@ const ButtonGroup = styled.div`
   justify-content: flex-end;
   gap: 12px;
   margin-top: 15px;
+  
+  @media (max-width: 480px) {
+    flex-direction: column-reverse;
+    
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 `;
 
 const Button = styled.button`
@@ -145,7 +154,7 @@ const MONTHS = [
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 6 }, (_, i) => currentYear + i);
 
-export default function BudgetForm({ onClose, onBudgetCreated }) {
+export default function BudgetForm({ onClose, onBudgetCreated, onBudgetUpdated, budgetToEdit = null }) {
   const { currentUser } = useAuth();
   const currentDate = new Date();
   
@@ -159,6 +168,20 @@ export default function BudgetForm({ onClose, onBudgetCreated }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (budgetToEdit) {
+      const now = new Date();
+      setFormData({
+        name: budgetToEdit.name || '',
+        description: budgetToEdit.description || '',
+        initialAmount: budgetToEdit.initialAmount || '',
+        month: budgetToEdit.month !== undefined ? budgetToEdit.month : now.getMonth(),
+        year: budgetToEdit.year || now.getFullYear(),
+        isMonthly: budgetToEdit.isMonthly !== undefined ? budgetToEdit.isMonthly : true
+      });
+    }
+  }, [budgetToEdit]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -189,15 +212,21 @@ export default function BudgetForm({ onClose, onBudgetCreated }) {
         createdBy: currentUser.uid
       };
       
-      const budgetId = await createBudget(currentUser.uid, budgetData);
-      
-      if (onBudgetCreated) {
-        onBudgetCreated(budgetId);
+      if (budgetToEdit) {
+        await updateBudget(budgetToEdit.id, budgetData);
+        if (onBudgetUpdated) {
+          onBudgetUpdated();
+        }
+      } else {
+        const budgetId = await createBudget(currentUser.uid, budgetData);
+        if (onBudgetCreated) {
+          onBudgetCreated(budgetId);
+        }
       }
       
       onClose();
     } catch (error) {
-      setError('Error al crear el presupuesto: ' + error.message);
+      setError('Error al ' + (budgetToEdit ? 'actualizar' : 'crear') + ' el presupuesto: ' + error.message);
       console.error(error);
     } finally {
       setLoading(false);

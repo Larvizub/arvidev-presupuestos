@@ -5,7 +5,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { getUserBudgets, deleteBudget } from '../services/budgetService';
 import { getBudgetTransactions, deleteTransaction } from '../services/transactionService';
 import styled from 'styled-components';
-import { FaChartPie, FaWallet, FaArrowUp, FaArrowDown, FaTrash, FaShare } from 'react-icons/fa';
+import { FaChartPie, FaWallet, FaArrowUp, FaArrowDown, FaTrash, FaShare, FaEdit } from 'react-icons/fa';
 import ActionButtons from '../components/dashboard/ActionButtons';
 import Modal from '../components/common/Modal';
 import BudgetForm from '../components/dashboard/BudgetForm';
@@ -65,7 +65,7 @@ const WelcomeMessage = styled.p`
 
 const SummaryCards = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
   margin-bottom: 32px;
 `;
@@ -108,7 +108,7 @@ const CardValue = styled.div`
 
 const BudgetGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
   margin-bottom: 32px;
 `;
@@ -290,7 +290,13 @@ export default function Dashboard() {
           const budgetsToProcess = showAllBudgets ? userBudgets : filteredBudgets;
           
           for (const budget of budgetsToProcess) {
-            transactionsData[budget.id] = await getBudgetTransactions(budget.id);
+            const budgetTransactions = await getBudgetTransactions(budget.id);
+            // Inyectar budgetId y budgetName en cada transacción
+            transactionsData[budget.id] = budgetTransactions.map(t => ({ 
+              ...t, 
+              budgetId: budget.id,
+              budgetName: budget.name 
+            }));
           }
           setTransactions(transactionsData);
         } catch (error) {
@@ -335,12 +341,37 @@ export default function Dashboard() {
     }
   };
 
+  const handleBudgetUpdated = async () => {
+    try {
+      const userBudgets = await getUserBudgets(currentUser.uid);
+      // Aplicar el mismo filtrado que en el useEffect
+      const filteredBudgets = userBudgets.filter(budget => 
+        budget.month === selectedMonth && budget.year === selectedYear
+      );
+      setBudgets(showAllBudgets ? userBudgets : filteredBudgets);
+      showAlert('Éxito', 'Presupuesto actualizado correctamente');
+    } catch (error) {
+      console.error('Error al actualizar presupuestos', error);
+    }
+  };
+
   const handleTransactionCreated = async (budgetId) => {
     try {
       const updatedTransactions = await getBudgetTransactions(budgetId);
+      // Obtener nombre del presupuesto
+      const budget = budgets.find(b => b.id === budgetId);
+      const budgetName = budget ? budget.name : '';
+      
+      // Inyectar budgetId y budgetName
+      const transactionsWithId = updatedTransactions.map(t => ({ 
+        ...t, 
+        budgetId,
+        budgetName
+      }));
+      
       setTransactions({
         ...transactions,
-        [budgetId]: updatedTransactions
+        [budgetId]: transactionsWithId
       });
     } catch (error) {
       console.error('Error al actualizar transacciones', error);
@@ -433,19 +464,30 @@ export default function Dashboard() {
       '¿Estás seguro de que deseas eliminar esta transacción?',
       async () => {
         try {
-          await deleteTransaction(budgetId, transactionId);
+          await deleteTransaction(budgetId, transactionId, currentUser.uid);
           
           // Actualizar transacciones
           const updatedTransactions = await getBudgetTransactions(budgetId);
+          // Obtener nombre del presupuesto
+          const budget = budgets.find(b => b.id === budgetId);
+          const budgetName = budget ? budget.name : '';
+          
+          // Inyectar budgetId y budgetName
+          const transactionsWithId = updatedTransactions.map(t => ({ 
+            ...t, 
+            budgetId,
+            budgetName
+          }));
+          
           setTransactions({
             ...transactions,
-            [budgetId]: updatedTransactions
+            [budgetId]: transactionsWithId
           });
           
           showAlert('Éxito', 'Transacción eliminada correctamente');
         } catch (error) {
           console.error('Error al eliminar la transacción', error);
-          showAlert('Error', 'Error al eliminar la transacción');
+          showAlert('Error', 'Error al eliminar la transacción: ' + error.message);
         }
       }
     );
@@ -454,9 +496,20 @@ export default function Dashboard() {
   const handleTransactionUpdated = async (budgetId) => {
     try {
       const updatedTransactions = await getBudgetTransactions(budgetId);
+      // Obtener nombre del presupuesto
+      const budget = budgets.find(b => b.id === budgetId);
+      const budgetName = budget ? budget.name : '';
+      
+      // Inyectar budgetId y budgetName
+      const transactionsWithId = updatedTransactions.map(t => ({ 
+        ...t, 
+        budgetId,
+        budgetName
+      }));
+      
       setTransactions({
         ...transactions,
-        [budgetId]: updatedTransactions
+        [budgetId]: transactionsWithId
       });
     } catch (error) {
       console.error('Error al actualizar transacciones', error);
@@ -604,6 +657,14 @@ export default function Dashboard() {
                         <FaShare /> Compartir
                       </Button>
                       <Button 
+                        bg="#f39c12" 
+                        color="white" 
+                        bgHover="#e67e22"
+                        onClick={() => handleOpenModal('editBudget', budget)}
+                      >
+                        <FaEdit /> Editar
+                      </Button>
+                      <Button 
                         bg="#e74c3c" 
                         color="white" 
                         bgHover="#c0392b"
@@ -626,7 +687,6 @@ export default function Dashboard() {
                 transactions={Object.values(transactions)
                   .flat()
                   .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
-                  .slice(0, 10)
                 }
                 onEdit={handleEditTransaction}
                 onDelete={handleDeleteTransaction}
@@ -642,16 +702,19 @@ export default function Dashboard() {
         onClose={handleCloseModal}
         title={
           modalType === 'newBudget' ? 'Crear Nuevo Presupuesto' :
+          modalType === 'editBudget' ? 'Editar Presupuesto' :
           modalType === 'newIncome' ? 'Registrar Ingreso' : 
           modalType === 'newExpense' ? 'Registrar Gasto' :
           modalType === 'editTransaction' ? 'Editar Transacción' :
           modalType === 'shareBudget' ? 'Compartir Presupuesto' : ''
         }
       >
-        {modalType === 'newBudget' && (
+        {(modalType === 'newBudget' || modalType === 'editBudget') && (
           <BudgetForm 
             onClose={handleCloseModal} 
-            onBudgetCreated={handleBudgetCreated} 
+            onBudgetCreated={handleBudgetCreated}
+            onBudgetUpdated={handleBudgetUpdated}
+            budgetToEdit={modalType === 'editBudget' ? selectedBudget : null}
           />
         )}
         {(modalType === 'newIncome' || modalType === 'newExpense') && selectedBudget && (

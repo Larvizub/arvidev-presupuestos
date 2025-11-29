@@ -41,6 +41,10 @@ const AppContainer = styled.div`
 const MainContent = styled.main`
   flex: 1;
   padding-bottom: 40px;
+  
+  @media (max-width: 768px) {
+    padding-bottom: 100px;
+  }
 `;
 
 function App() {

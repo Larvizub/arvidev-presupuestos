@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import { FaEdit, FaTrash, FaArrowUp, FaArrowDown, FaShoppingCart, FaCheckCircle } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaArrowUp, FaArrowDown, FaShoppingCart, FaCheckCircle, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { useCurrency } from '../../contexts/CurrencyContext';
 
 const TransactionsContainer = styled.div`
@@ -31,9 +31,16 @@ const EmptyMessage = styled.div`
   color: #7f8c8d;
 `;
 
+const TableWrapper = styled.div`
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+`;
+
 const TransactionTable = styled.table`
   width: 100%;
   border-collapse: collapse;
+  min-width: 600px; /* Asegura que la tabla no se comprima demasiado */
 `;
 
 const TableHead = styled.thead`
@@ -110,11 +117,23 @@ const TransactionCategory = styled.span`
 
 function TransactionList({ transactions, onEdit, onDelete }) {
   const { formatCurrency } = useCurrency();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   // Ordenar transacciones por fecha más reciente
   const sortedTransactions = [...transactions].sort((a, b) => 
     new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)
   );
+
+  // Calcular índices para paginación
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentTransactions = sortedTransactions.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedTransactions.length / itemsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
   
   if (transactions.length === 0) {
     return (
@@ -135,84 +154,114 @@ function TransactionList({ transactions, onEdit, onDelete }) {
         <TransactionTitle>Últimas Transacciones</TransactionTitle>
       </TransactionHeader>
       
-      <TransactionTable>
-        <TableHead>
-          <tr>
-            <th>Nombre</th>
-            <th>Categoría</th>
-            <th>Fecha</th>
-            <th>Monto</th>
-            <th>Acciones</th>
-          </tr>
-        </TableHead>
-        <TableBody>
-          {sortedTransactions.map(transaction => {
-            // Calcular porcentaje de items pagados para la categoría Alimentación
-            let paidPercentage = 0;
-            if (transaction.category === 'Alimentación' && 
-                transaction.foodItems && 
-                transaction.foodItems.length > 0) {
-              const totalItems = transaction.foodItems.length;
-              const paidItems = transaction.foodItems.filter(item => item.isPaid).length;
-              paidPercentage = Math.round((paidItems / totalItems) * 100);
-            }
-            
-            return (
-              <tr key={transaction.id}>
-                <td>
-                  {transaction.name}
-                  {transaction.category === 'Alimentación' && transaction.foodItems && transaction.foodItems.length > 0 && (
-                    <FoodItemsIndicator>
-                      <FaShoppingCart /> {transaction.foodItems.length} artículos
-                      {paidPercentage > 0 && (
-                        <span style={{ 
-                          marginLeft: '8px', 
-                          color: paidPercentage === 100 ? '#2ecc71' : '#f39c12' 
-                        }}>
-                          <FaCheckCircle /> {paidPercentage}% pagado
-                        </span>
-                      )}
-                    </FoodItemsIndicator>
-                  )}
-                </td>
-                <td>
-                  <TransactionCategory>
-                    {transaction.category}
-                  </TransactionCategory>
-                </td>
-                <td>
-                  <TransactionDate>
-                    {new Date(transaction.date || transaction.createdAt).toLocaleDateString()}
-                  </TransactionDate>
-                </td>
-                <td>
-                  <TransactionAmount type={transaction.type}>
-                    {transaction.type === 'income' ? <FaArrowUp /> : <FaArrowDown />}
-                    {formatCurrency(transaction.amount)}
-                  </TransactionAmount>
-                </td>
-                <td>
-                  <ActionButtons>
-                    <ActionButton 
-                      onClick={() => onEdit(transaction)} 
-                      title="Editar"
-                    >
-                      <FaEdit />
-                    </ActionButton>
-                    <ActionButton 
-                      color="#e74c3c" 
-                      onClick={() => onDelete(transaction.id, transaction.budgetId)} 
-                      title="Eliminar"
-                    >
-                      <FaTrash />
-                    </ActionButton>
-                  </ActionButtons>
-                </td>
-              </tr>
-            );
-          })}
-        </TableBody>
-      </TransactionTable>
+      <TableWrapper>
+        <TransactionTable>
+          <TableHead>
+            <tr>
+              <th>Nombre</th>
+              <th>Categoría</th>
+              <th>Presupuesto</th>
+              <th>Fecha</th>
+              <th>Monto</th>
+              <th>Acciones</th>
+            </tr>
+          </TableHead>
+          <TableBody>
+            {currentTransactions.map(transaction => {
+              // Calcular porcentaje de items pagados para la categoría Alimentación
+              let paidPercentage = 0;
+              if (transaction.category === 'Alimentación' && 
+                  transaction.foodItems && 
+                  transaction.foodItems.length > 0) {
+                const totalItems = transaction.foodItems.length;
+                const paidItems = transaction.foodItems.filter(item => item.isPaid).length;
+                paidPercentage = Math.round((paidItems / totalItems) * 100);
+              }
+              
+              return (
+                <tr key={transaction.id}>
+                  <td>
+                    {transaction.name}
+                    {transaction.category === 'Alimentación' && transaction.foodItems && transaction.foodItems.length > 0 && (
+                      <FoodItemsIndicator>
+                        <FaShoppingCart /> {transaction.foodItems.length} artículos
+                        {paidPercentage > 0 && (
+                          <span style={{ 
+                            marginLeft: '8px', 
+                            color: paidPercentage === 100 ? '#2ecc71' : '#f39c12' 
+                          }}>
+                            <FaCheckCircle /> {paidPercentage}% pagado
+                          </span>
+                        )}
+                      </FoodItemsIndicator>
+                    )}
+                  </td>
+                  <td>
+                    <TransactionCategory>
+                      {transaction.category}
+                    </TransactionCategory>
+                  </td>
+                  <td>
+                    <BudgetNameTag>
+                      {transaction.budgetName || 'Desconocido'}
+                    </BudgetNameTag>
+                  </td>
+                  <td>
+                    <TransactionDate>
+                      {new Date(transaction.date || transaction.createdAt).toLocaleDateString()}
+                    </TransactionDate>
+                  </td>
+                  <td>
+                    <TransactionAmount type={transaction.type}>
+                      {transaction.type === 'income' ? <FaArrowUp /> : <FaArrowDown />}
+                      {formatCurrency(transaction.amount)}
+                    </TransactionAmount>
+                  </td>
+                  <td>
+                    <ActionButtons>
+                      <ActionButton 
+                        onClick={() => onEdit(transaction)} 
+                        title="Editar"
+                      >
+                        <FaEdit />
+                      </ActionButton>
+                      <ActionButton 
+                        color="#e74c3c" 
+                        onClick={() => onDelete(transaction.id, transaction.budgetId)} 
+                        title="Eliminar"
+                      >
+                        <FaTrash />
+                      </ActionButton>
+                    </ActionButtons>
+                  </td>
+                </tr>
+              );
+            })}
+          </TableBody>
+        </TransactionTable>
+      </TableWrapper>
+      
+      {totalPages > 1 && (
+        <PaginationContainer>
+          <PaginationButton 
+            onClick={() => handlePageChange(currentPage - 1)} 
+            disabled={currentPage === 1}
+          >
+            <FaChevronLeft /> Anterior
+          </PaginationButton>
+          
+          <PageInfo>
+            Página {currentPage} de {totalPages}
+          </PageInfo>
+          
+          <PaginationButton 
+            onClick={() => handlePageChange(currentPage + 1)} 
+            disabled={currentPage === totalPages}
+          >
+            Siguiente <FaChevronRight />
+          </PaginationButton>
+        </PaginationContainer>
+      )}
     </TransactionsContainer>
   );
 }
@@ -227,6 +276,52 @@ const FoodItemsIndicator = styled.div`
   background-color: #f1f5f9;
   padding: 3px 8px;
   border-radius: 12px;
+`;
+
+const BudgetNameTag = styled.span`
+  font-size: 0.85rem;
+  color: #3498db;
+  font-weight: 500;
+`;
+
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 15px;
+  gap: 15px;
+  border-top: 1px solid #e9ecef;
+`;
+
+const PaginationButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  background-color: white;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  
+  &:hover:not(:disabled) {
+    background-color: #f8fafc;
+    color: #3498db;
+    border-color: #cbd5e1;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const PageInfo = styled.span`
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
 `;
 
 export default React.memo(TransactionList);

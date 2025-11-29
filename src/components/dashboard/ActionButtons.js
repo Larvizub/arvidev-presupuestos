@@ -42,6 +42,7 @@ const ActionButton = styled.button`
   @media (max-width: 768px) {
     padding: 12px 16px;
     font-size: 14px;
+    flex: 1 1 45%; /* Grow to fill space, but allow 2 per row */
   }
 `;
 

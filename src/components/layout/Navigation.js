@@ -15,7 +15,16 @@ const NavContainer = styled.nav`
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   
   @media (max-width: 768px) {
-    padding: 0 10px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    padding: 0;
+    justify-content: center;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    padding-bottom: env(safe-area-inset-bottom);
+    background-color: #2c3e50; /* Ensure background is set */
   }
 `;
 
@@ -27,6 +36,10 @@ const Logo = styled.div`
     color: white;
     text-decoration: none;
   }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const NavLinks = styled.div`
@@ -34,7 +47,9 @@ const NavLinks = styled.div`
   gap: 20px;
   
   @media (max-width: 768px) {
-    gap: 10px;
+    width: 100%;
+    justify-content: space-around;
+    gap: 0;
   }
 `;
 
@@ -56,7 +71,11 @@ const NavLink = styled(Link)`
   }
   
   @media (max-width: 768px) {
-    padding: 5px;
+    flex-direction: column;
+    padding: 12px 0;
+    font-size: 0.7rem;
+    flex: 1;
+    justify-content: center;
     
     span {
       display: none;
@@ -64,7 +83,8 @@ const NavLink = styled(Link)`
     
     svg {
       margin-right: 0;
-      font-size: 1.2rem;
+      font-size: 1.8rem;
+      margin-bottom: 0;
     }
   }
 `;
@@ -89,7 +109,11 @@ const LogoutButton = styled.button`
   }
   
   @media (max-width: 768px) {
-    padding: 5px;
+    flex-direction: column;
+    padding: 12px 0;
+    font-size: 0.7rem;
+    flex: 1;
+    justify-content: center;
     
     span {
       display: none;
@@ -97,7 +121,8 @@ const LogoutButton = styled.button`
     
     svg {
       margin-right: 0;
-      font-size: 1.2rem;
+      font-size: 1.8rem;
+      margin-bottom: 0;
     }
   }
 `;
