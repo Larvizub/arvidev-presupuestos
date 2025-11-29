@@ -6,7 +6,6 @@ import styled from 'styled-components';
 import { FaSave, FaTimes, FaArrowUp, FaArrowDown, FaCalendarAlt, FaTag, FaAlignLeft, FaWallet, FaShoppingCart } from 'react-icons/fa';
 import FoodItemsList from './FoodItemsList';
 import { useNotification } from '../../contexts/NotificationContext';
-import DatePicker from '../common/DatePicker';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 const Form = styled.form`
@@ -252,6 +251,10 @@ const MONTHS = [
   { value: 11, label: 'Diciembre' }
 ];
 
+function daysInMonth(year, monthIndex) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
 export default function TransactionForm({ 
   budgetId, 
   transactionId, 
@@ -452,6 +455,35 @@ export default function TransactionForm({
   
   // Encontrar el presupuesto seleccionado
   const selectedBudget = userBudgets.find(b => b.id === formData.budgetId);
+
+  // Sincronizar la fecha del formulario con el mes/año del presupuesto seleccionado
+  useEffect(() => {
+    if (!selectedBudget) return;
+
+    const year = selectedBudget.year;
+    const month = selectedBudget.month; // 0-11
+
+    const parts = (formData.date || '').split('-');
+    const currentDay = parts.length === 3 ? Number(parts[2]) : 1;
+    const maxDay = daysInMonth(year, month);
+    const day = Math.min(Math.max(1, currentDay || 1), maxDay);
+
+    const newDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (formData.date !== newDate) {
+      setFormData(prev => ({ ...prev, date: newDate }));
+    }
+  }, [selectedBudget, formData.date]);
+
+  const handleDayChange = (e) => {
+    const val = Number(e.target.value) || 1;
+    if (!selectedBudget) return;
+    const year = selectedBudget.year;
+    const month = selectedBudget.month;
+    const maxDay = daysInMonth(year, month);
+    const day = Math.min(Math.max(1, val), maxDay);
+    const newDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    setFormData(prev => ({ ...prev, date: newDate }));
+  };
   
   if (loading && initialLoad) {
     return (
@@ -597,14 +629,41 @@ export default function TransactionForm({
       
       <FormGroup>
         <Label><FaCalendarAlt /> Fecha</Label>
-        <DatePicker
-          name="date"
-          value={formData.date}
-          onChange={handleChange}
-          required
-          focusColor={formData.type === 'income' ? '#2ecc71' : '#e74c3c'}
-          focusShadow={formData.type === 'income' ? 'rgba(46, 204, 113, 0.2)' : 'rgba(231, 76, 60, 0.2)'}
-        />
+        {selectedBudget ? (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {/* Día editable */}
+            <Select
+              name="day"
+              value={String(Number((formData.date || '').split('-')[2] || 1))}
+              onChange={handleDayChange}
+              required
+              isIncome={formData.type === 'income'}
+            >
+              {Array.from({ length: daysInMonth(selectedBudget.year, selectedBudget.month) }, (_, i) => i + 1).map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </Select>
+
+            {/* Mes bloqueado (ligado al presupuesto) */}
+            <Select disabled value={selectedBudget.month} isIncome={formData.type === 'income'}>
+              <option value={selectedBudget.month}>{MONTHS[selectedBudget.month].label}</option>
+            </Select>
+
+            {/* Año bloqueado (ligado al presupuesto) */}
+            <Select disabled value={selectedBudget.year} isIncome={formData.type === 'income'}>
+              <option value={selectedBudget.year}>{selectedBudget.year}</option>
+            </Select>
+          </div>
+        ) : (
+          <Input
+            type="date"
+            name="date"
+            value={formData.date}
+            onChange={handleChange}
+            required
+            isIncome={formData.type === 'income'}
+          />
+        )}
       </FormGroup>
       
       <FormGroup>
