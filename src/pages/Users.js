@@ -5,28 +5,104 @@ import { ref, get, update } from 'firebase/database';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import AlertModal from '../components/common/AlertModal';
+import { FaUsers, FaUserShield, FaUser } from 'react-icons/fa';
 
-const Container = styled.div`
-  max-width: 1000px;
+const DashboardContainer = styled.div`
+  padding: 24px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 20px;
+  background-color: #f8fafc;
+  min-height: calc(100vh - 60px);
 `;
 
-const Title = styled.h2`
-  color: #2c3e50;
-  margin-bottom: 20px;
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+`;
+
+const Title = styled.h1`
+  color: #1e293b;
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
+  svg {
+    color: #3498db;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 1.8rem;
+  }
+`;
+
+const WelcomeMessage = styled.p`
+  color: #64748b;
+  font-size: 1.1rem;
+  margin: 8px 0 24px;
+`;
+
+const TableContainer = styled.div`
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const UserTable = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+`;
+
+const Th = styled.th`
+  background-color: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  padding: 16px 24px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const Td = styled.td`
+  padding: 16px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  font-size: 1rem;
   
-  @media (max-width: 768px) {
-    display: none;
+  &:last-child {
+    text-align: right;
+  }
+`;
+
+const Tr = styled.tr`
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: #f8fafc;
+  }
+  
+  &:last-child td {
+    border-bottom: none;
   }
 `;
 
@@ -34,20 +110,20 @@ const MobileUserList = styled.div`
   display: none;
   
   @media (max-width: 768px) {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 `;
 
 const UserCard = styled.div`
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  background-color: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 `;
 
 const UserCardHeader = styled.div`
@@ -55,21 +131,22 @@ const UserCardHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #f1f5f9;
-  padding-bottom: 10px;
-  margin-bottom: 5px;
+  padding-bottom: 12px;
+  margin-bottom: 4px;
 `;
 
 const UserCardName = styled.h3`
   margin: 0;
   font-size: 1.1rem;
-  color: #2c3e50;
+  color: #1e293b;
+  font-weight: 600;
 `;
 
 const UserCardRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 `;
 
 const Label = styled.span`
@@ -78,44 +155,43 @@ const Label = styled.span`
 `;
 
 const Value = styled.span`
-  color: #2c3e50;
+  color: #1e293b;
   font-weight: 500;
 `;
 
-const Th = styled.th`
-  background-color: #f8f9fa;
-  color: #2c3e50;
-  padding: 15px;
-  text-align: left;
-  border-bottom: 2px solid #e9ecef;
-`;
-
-const Td = styled.td`
-  padding: 15px;
-  border-bottom: 1px solid #e9ecef;
-  color: #2c3e50;
-`;
-
 const Select = styled.select`
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #ced4da;
-  background-color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
   cursor: pointer;
+  font-size: 0.9rem;
+  color: #1e293b;
+  transition: all 0.2s;
+  
+  &:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  }
   
   &:disabled {
-    background-color: #e9ecef;
+    background-color: #f1f5f9;
+    color: #94a3b8;
     cursor: not-allowed;
   }
 `;
 
 const Badge = styled.span`
-  padding: 5px 10px;
+  padding: 6px 12px;
   border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: bold;
-  background-color: ${props => props.role === 'admin' ? '#e74c3c' : '#3498db'};
-  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background-color: ${props => props.role === 'admin' ? '#fee2e2' : '#e0f2fe'};
+  color: ${props => props.role === 'admin' ? '#ef4444' : '#0ea5e9'};
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 `;
 
 export default function Users() {
@@ -181,46 +257,70 @@ export default function Users() {
     return 'Sin nombre';
   };
 
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <LoadingSpinner message="Cargando usuarios..." />;
 
   return (
-    <Container>
-      <Title>Gestión de Usuarios</Title>
-      {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+    <DashboardContainer>
+      <Header>
+        <div>
+          <Title><FaUsers /> Gestión de Usuarios</Title>
+          <WelcomeMessage>
+            Administra los usuarios registrados y sus permisos en la plataforma.
+          </WelcomeMessage>
+        </div>
+      </Header>
       
-      <UserTable>
-        <thead>
-          <tr>
-            <Th>Usuario</Th>
-            <Th>Email</Th>
-            <Th>Rol Actual</Th>
-            <Th>Acciones</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map(user => (
-            <tr key={user.id}>
-              <Td>{getDisplayName(user)}</Td>
-              <Td>{user.email}</Td>
-              <Td>
-                <Badge role={user.role || 'user'}>
-                  {user.role === 'admin' ? 'Administrador' : 'Usuario'}
-                </Badge>
-              </Td>
-              <Td>
-                <Select 
-                  value={user.role || 'user'} 
-                  onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                  disabled={user.id === currentUser.uid} // Prevent changing own role
-                >
-                  <option value="user">Usuario</option>
-                  <option value="admin">Administrador</option>
-                </Select>
-              </Td>
+      {error && (
+        <div style={{ 
+          backgroundColor: '#fee2e2', 
+          color: '#ef4444', 
+          padding: '16px', 
+          borderRadius: '8px', 
+          marginBottom: '24px',
+          border: '1px solid #fecaca'
+        }}>
+          {error}
+        </div>
+      )}
+      
+      <TableContainer>
+        <UserTable>
+          <thead>
+            <tr>
+              <Th>Usuario</Th>
+              <Th>Email</Th>
+              <Th>Rol Actual</Th>
+              <Th style={{ textAlign: 'right' }}>Acciones</Th>
             </tr>
-          ))}
-        </tbody>
-      </UserTable>
+          </thead>
+          <tbody>
+            {users.map(user => (
+              <Tr key={user.id}>
+                <Td>
+                  <div style={{ fontWeight: 500 }}>{getDisplayName(user)}</div>
+                </Td>
+                <Td>{user.email}</Td>
+                <Td>
+                  <Badge role={user.role || 'user'}>
+                    {user.role === 'admin' ? <FaUserShield size={12} /> : <FaUser size={12} />}
+                    {user.role === 'admin' ? 'Administrador' : 'Usuario'}
+                  </Badge>
+                </Td>
+                <Td>
+                  <Select 
+                    value={user.role || 'user'} 
+                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                    disabled={user.id === currentUser.uid} // Prevent changing own role
+                  >
+                    <option value="user">Usuario</option>
+                    <option value="admin">Administrador</option>
+                  </Select>
+                </Td>
+              </Tr>
+            ))}
+          </tbody>
+        </UserTable>
+      </TableContainer>
 
       <MobileUserList>
         {users.map(user => (
@@ -228,6 +328,7 @@ export default function Users() {
             <UserCardHeader>
               <UserCardName>{getDisplayName(user)}</UserCardName>
               <Badge role={user.role || 'user'}>
+                {user.role === 'admin' ? <FaUserShield size={12} /> : <FaUser size={12} />}
                 {user.role === 'admin' ? 'Admin' : 'User'}
               </Badge>
             </UserCardHeader>
@@ -259,6 +360,6 @@ export default function Users() {
         message={alert.message}
         onClose={() => setAlert({ ...alert, show: false })}
       />
-    </Container>
+    </DashboardContainer>
   );
 }

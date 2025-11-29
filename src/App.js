@@ -8,6 +8,8 @@ import AdminRoute from './components/layout/AdminRoute';
 import Navigation from './components/layout/Navigation';
 import styled, { createGlobalStyle } from 'styled-components';
 
+import LoadingSpinner from './components/common/LoadingSpinner';
+
 // lazy load pages y auth
 const Login = lazy(() => import('./components/auth/Login'));
 const Signup = lazy(() => import('./components/auth/Signup'));
@@ -57,7 +59,7 @@ function App() {
             <AppContainer>
               <Navigation />
               <MainContent>
-                <Suspense fallback={<div>Cargando...</div>}>
+                <Suspense fallback={<LoadingSpinner />}>
                   <Routes>
                     <Route 
                       path="/" 

@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import { FaSave, FaTimes, FaArrowUp, FaArrowDown, FaCalendarAlt, FaTag, FaAlignLeft, FaWallet, FaShoppingCart } from 'react-icons/fa';
 import FoodItemsList from './FoodItemsList';
 import { useNotification } from '../../contexts/NotificationContext';
+import LoadingSpinner from '../common/LoadingSpinner';
 
 const Form = styled.form`
   display: flex;
@@ -454,7 +455,7 @@ export default function TransactionForm({
   if (loading && initialLoad) {
     return (
       <div style={{ textAlign: 'center', padding: '20px' }}>
-        <p>Cargando datos...</p>
+        <LoadingSpinner message="Cargando datos..." />
       </div>
     );
   }
