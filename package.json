@@ -1,0 +1,48 @@
+{
+  "name": "presupuesto-app",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "chart.js": "^4.1.1",
+    "firebase": "^9.15.0",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.1.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^4.7.1",
+    "react-router-dom": "^6.6.1",
+    "styled-components": "^5.3.6",
+    "web-vitals": "^2.1.4"
+  },
+  "devDependencies": {
+    "@craco/craco": "^7.1.0",
+    "eslint": "^8.30.0",
+    "eslint-plugin-react": "^7.31.11",
+    "source-map-loader": "^4.0.2"
+  },
+  "scripts": {
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ],
+    "rules": {
+      "no-unused-vars": "warn"
+    }
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

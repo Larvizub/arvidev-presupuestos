@@ -1,0 +1,36 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "userBudgets": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "budgets": {
+      "$budgetId": {
+        ".read": "data.child('ownerId').val() === auth.uid || data.child('sharedWith').child(auth.uid).exists()",
+        ".write": "!data.exists() || data.child('ownerId').val() === auth.uid",
+        "sharedWith": {
+          "$sharedUid": {
+            ".write": "auth.uid === data.parent().child('ownerId').val()"
+          }
+        }
+      }
+    },
+    "transactions": {
+      "$budgetId": {
+        ".read": "root.child('budgets').child($budgetId).child('ownerId').val() === auth.uid || root.child('budgets').child($budgetId).child('sharedWith').child(auth.uid).exists()",
+        ".write": "root.child('budgets').child($budgetId).child('ownerId').val() === auth.uid || root.child('budgets').child($budgetId).child('sharedWith').child(auth.uid).exists()",
+        "$transactionId": {
+          ".validate": "newData.hasChild('userId') && newData.child('userId').val() === auth.uid"
+        }
+      }
+    }
+  }
+}

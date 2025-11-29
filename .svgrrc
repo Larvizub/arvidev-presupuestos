@@ -1,0 +1,7 @@
+{
+  "icon": true,
+  "expandProps": "end",
+  "replaceAttrValues": {
+    "#000": "currentColor"
+  }
+}
