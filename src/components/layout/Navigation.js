@@ -5,15 +5,23 @@ import styled from 'styled-components';
 import { FaHome, FaUserFriends, FaCog, FaSignOutAlt, FaUsers, FaUserShield } from 'react-icons/fa';
 
 const NavContainer = styled.nav`
-  background-color: #2c3e50;
+  background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%);
   color: white;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
-  height: 60px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  
+  justify-content: space-between;
+  padding: 0 28px;
+  height: 72px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  box-shadow: 0 6px 18px rgba(2,6,23,0.25);
+  backdrop-filter: blur(4px);
+  position: relative;
+
+  @media (max-width: 1024px) {
+    padding: 0 20px;
+    height: 64px;
+  }
+
   @media (max-width: 768px) {
     position: fixed;
     bottom: 0;
@@ -24,17 +32,33 @@ const NavContainer = styled.nav`
     justify-content: center;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
     padding-bottom: env(safe-area-inset-bottom);
-    background-color: #2c3e50; /* Ensure background is set */
+    background-color: #2c3e50; /* Ensure background is set for mobile */
+    height: 60px;
   }
 `;
 
 const Logo = styled.div`
-  font-size: 1.5rem;
-  font-weight: bold;
-  
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
   a {
     color: white;
     text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .brand-accent {
+    background: rgba(255,255,255,0.08);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-weight: 800;
+    color: #fff;
   }
 
   @media (max-width: 768px) {
@@ -44,8 +68,11 @@ const Logo = styled.div`
 
 const NavLinks = styled.div`
   display: flex;
-  gap: 20px;
-  
+  gap: 18px;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+
   @media (max-width: 768px) {
     width: 100%;
     justify-content: space-around;
@@ -54,33 +81,38 @@ const NavLinks = styled.div`
 `;
 
 const NavLink = styled(Link)`
-  color: ${props => props.active ? '#3498db' : 'white'};
+  color: ${props => props.active ? '#fff' : 'rgba(255,255,255,0.9)'};
   text-decoration: none;
   display: flex;
   align-items: center;
-  padding: 5px 10px;
-  border-radius: 5px;
-  transition: all 0.3s;
-  
+  padding: 8px 14px;
+  border-radius: 10px;
+  transition: all 0.18s ease;
+  font-weight: 600;
+  backdrop-filter: blur(2px);
+
   &:hover {
-    background-color: #34495e;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(2,6,23,0.18);
+    background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
   }
-  
+
   svg {
-    margin-right: 5px;
+    margin-right: 8px;
+    font-size: 1.05rem;
   }
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
     padding: 12px 0;
     font-size: 0.7rem;
     flex: 1;
     justify-content: center;
-    
+
     span {
       display: none;
     }
-    
+
     svg {
       margin-right: 0;
       font-size: 1.8rem;
@@ -90,41 +122,68 @@ const NavLink = styled(Link)`
 `;
 
 const LogoutButton = styled.button`
-  background: none;
-  border: none;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.06);
   color: white;
   display: flex;
   align-items: center;
-  padding: 5px 10px;
-  border-radius: 5px;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s;
-  
+  transition: all 0.18s ease;
+  font-weight: 600;
+
   &:hover {
-    background-color: #e74c3c;
+    background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+    transform: translateY(-2px);
   }
-  
+
   svg {
-    margin-right: 5px;
+    margin-right: 4px;
   }
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
     padding: 12px 0;
     font-size: 0.7rem;
     flex: 1;
     justify-content: center;
-    
-    span {
-      display: none;
-    }
-    
-    svg {
-      margin-right: 0;
-      font-size: 1.8rem;
-      margin-bottom: 0;
-    }
+
+    span { display: none; }
+
+    svg { margin-right: 0; font-size: 1.8rem; margin-bottom: 0; }
   }
+`;
+
+const UserArea = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 16px;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const Avatar = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #60a5fa, #1e40af);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(2,6,23,0.25);
+`;
+
+const UserName = styled.div`
+  color: rgba(255,255,255,0.95);
+  font-weight: 600;
+  font-size: 0.95rem;
 `;
 
 export default function Navigation() {
@@ -146,8 +205,9 @@ export default function Navigation() {
   return (
     <NavContainer>
       <Logo>
-        <Link to="/dashboard">PresupuestoApp</Link>
+        <Link to="/dashboard"><div className="brand-accent">PresupuestoApp</div></Link>
       </Logo>
+
       <NavLinks>
         <NavLink to="/dashboard" active={location.pathname === '/dashboard' ? 1 : 0}>
           <FaHome />
@@ -157,7 +217,7 @@ export default function Navigation() {
           <FaUserFriends />
           <span>Compartidos</span>
         </NavLink>
-        
+
         {currentUser.role === 'admin' && (
           <>
             <NavLink to="/users" active={location.pathname === '/users' ? 1 : 0}>
@@ -175,11 +235,18 @@ export default function Navigation() {
           <FaCog />
           <span>Configuración</span>
         </NavLink>
-        <LogoutButton onClick={handleLogout}>
-          <FaSignOutAlt />
-          <span>Cerrar Sesión</span>
-        </LogoutButton>
       </NavLinks>
+
+      <UserArea>
+        <Avatar aria-hidden>
+          {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : (currentUser.email ? currentUser.email.charAt(0).toUpperCase() : '?')}
+        </Avatar>
+        <UserName>{currentUser.displayName || currentUser.email}</UserName>
+        <LogoutButton onClick={handleLogout} title="Cerrar sesión">
+          <FaSignOutAlt />
+          <span>Cerrar</span>
+        </LogoutButton>
+      </UserArea>
     </NavContainer>
   );
 }
