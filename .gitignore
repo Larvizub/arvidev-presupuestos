@@ -24,3 +24,7 @@ yarn-error.log*
 # firebase
 .firebase/
 
+database.rules.json
+firebase-rules.json
+
+

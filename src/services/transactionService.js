@@ -1,4 +1,4 @@
-import { ref, set, get, push, remove, update, query, orderByChild, equalTo } from 'firebase/database';
+import { ref, set, get, push, remove, update, query, orderByChild, equalTo, onValue } from 'firebase/database';
 import { database } from '../firebase/config';
 import { validateTransaction, sanitizeData } from './validationService';
 
@@ -60,6 +60,22 @@ export const getBudgetTransactions = async (budgetId) => {
   if (!snapshot.exists()) return [];
   
   return Object.values(snapshot.val());
+};
+
+// Suscribirse a las transacciones de un presupuesto (Tiempo Real)
+export const subscribeToBudgetTransactions = (budgetId, callback) => {
+  const transactionsRef = ref(database, `transactions/${budgetId}`);
+  
+  return onValue(transactionsRef, (snapshot) => {
+    if (snapshot.exists()) {
+      callback(Object.values(snapshot.val()));
+    } else {
+      callback([]);
+    }
+  }, (error) => {
+    console.error(`Error subscribing to transactions for budget ${budgetId}:`, error);
+    callback([]);
+  });
 };
 
 // Actualizar transacción

@@ -67,43 +67,22 @@ export function AuthProvider({ children }) {
         throw new Error('Credenciales inválidas');
       }
       
-      // Implementar protección contra fuerza bruta
-      const ipAddress = "client-ip"; // En producción, obtendrías la IP real
-      const attemptKey = `loginAttempts/${btoa(email)}/${ipAddress.replace(/\./g, '-')}`;
-      
+      // Primero intentar iniciar sesión directamente sin leer la RTDB
+      // (Evita lecturas públicas que causan permission-denied si las reglas son restrictivas)
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
       try {
-        const attemptsSnapshot = await get(ref(database, attemptKey));
-        const attempts = attemptsSnapshot.exists() ? attemptsSnapshot.val() : { count: 0, lastAttempt: 0 };
-        
-        // Si hay más de 5 intentos en 15 minutos, bloquear
-        if (attempts.count >= 5 && Date.now() - attempts.lastAttempt < 15 * 60 * 1000) {
-          throw new Error('Demasiados intentos fallidos. Intente nuevamente más tarde.');
-        }
-        
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        
-        // Éxito: reiniciar contador
-        await set(ref(database, attemptKey), { count: 0, lastAttempt: Date.now() });
-        
-        // Actualizar último login
+        // Actualizar último login (esto requiere que las reglas permitan escritura para el uid autenticado)
         await set(ref(database, `users/${userCredential.user.uid}/lastLogin`), new Date().toISOString());
-        
-        return userCredential.user;
-      } catch (error) {
-        // Si es error de autenticación, incrementar contador
-        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-          const attemptsSnapshot = await get(ref(database, attemptKey));
-          const attempts = attemptsSnapshot.exists() ? attemptsSnapshot.val() : { count: 0, lastAttempt: 0 };
-          
-          await set(ref(database, attemptKey), { 
-            count: attempts.count + 1, 
-            lastAttempt: Date.now() 
-          });
-        }
-        throw error;
+      } catch (e) {
+        // No bloquear el inicio de sesión si esta escritura falla por reglas
+        console.warn('No se pudo actualizar lastLogin en la base de datos (posible regla):', e && e.code, e && e.message);
       }
+
+      return userCredential.user;
     } catch (error) {
-      console.error("Error en login:", error);
+      // Loggear detalles para diagnóstico rápido
+      console.error("Error en login:", error.code, error.message, error);
       setAuthError(error.message);
       throw error;
     }

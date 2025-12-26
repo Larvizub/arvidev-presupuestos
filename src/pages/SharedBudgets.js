@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { getUserBudgets } from '../services/budgetService';
-import { getBudgetTransactions } from '../services/transactionService';
+import { subscribeToUserBudgets } from '../services/budgetService';
+import { subscribeToBudgetTransactions } from '../services/transactionService';
 import styled from 'styled-components';
 import { FaUserFriends, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import Modal from '../components/common/Modal';
@@ -224,45 +224,43 @@ export default function SharedBudgets() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   useEffect(() => {
-    const fetchSharedBudgets = async () => {
-      if (currentUser) {
-        try {
-          setIsLoading(true);
-          // Obtener todos los presupuestos
-          const allBudgets = await getUserBudgets(currentUser.uid);
-          
-          // Filtrar solo los compartidos (donde el ownerId no es el usuario actual)
-          const filteredSharedBudgets = allBudgets.filter(budget => 
-            budget.ownerId !== currentUser.uid
-          );
-          
-          setSharedBudgets(filteredSharedBudgets);
-          
-          // Obtener transacciones para cada presupuesto compartido
-          const transactionsData = {};
-          
-          for (const budget of filteredSharedBudgets) {
-            const budgetTransactions = await getBudgetTransactions(budget.id);
-            // Inyectar budgetId y budgetName en cada transacción
-            transactionsData[budget.id] = budgetTransactions.map(t => ({ 
-              ...t, 
-              budgetId: budget.id,
-              budgetName: budget.name 
-            }));
-          }
-          setTransactions(transactionsData);
-        } catch (error) {
-          console.error('Error al obtener presupuestos compartidos', error);
-        } finally {
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 300);
-        }
-      }
-    };
-    
-    fetchSharedBudgets();
+    let unsubscribeBudgets = () => {};
+
+    if (currentUser) {
+      setIsLoading(true);
+      unsubscribeBudgets = subscribeToUserBudgets(currentUser.uid, (allBudgets) => {
+        const filteredSharedBudgets = allBudgets.filter(budget => 
+          budget.ownerId !== currentUser.uid
+        );
+        setSharedBudgets(filteredSharedBudgets);
+        setIsLoading(false);
+      });
+    }
+
+    return () => unsubscribeBudgets();
   }, [currentUser]);
+
+  useEffect(() => {
+    const unsubscribers = [];
+    
+    sharedBudgets.forEach(budget => {
+      const unsub = subscribeToBudgetTransactions(budget.id, (budgetTransactions) => {
+        setTransactions(prev => ({
+          ...prev,
+          [budget.id]: budgetTransactions.map(t => ({
+            ...t,
+            budgetId: budget.id,
+            budgetName: budget.name
+          }))
+        }));
+      });
+      unsubscribers.push(unsub);
+    });
+
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, [sharedBudgets]);
 
   const handleOpenModal = (type, budget = null) => {
     setModalType(type);
@@ -274,52 +272,12 @@ export default function SharedBudgets() {
     setShowModal(false);
   };
 
-  const handleTransactionCreated = async (budgetId) => {
-    try {
-      const updatedTransactions = await getBudgetTransactions(budgetId);
-      // Obtener nombre del presupuesto
-      const budget = sharedBudgets.find(b => b.id === budgetId);
-      const budgetName = budget ? budget.name : '';
-      
-      // Inyectar budgetId y budgetName
-      const transactionsWithId = updatedTransactions.map(t => ({ 
-        ...t, 
-        budgetId,
-        budgetName
-      }));
-      
-      setTransactions({
-        ...transactions,
-        [budgetId]: transactionsWithId
-      });
-      
-      showAlert('Éxito', 'Transacción registrada correctamente');
-    } catch (error) {
-      console.error('Error al actualizar transacciones', error);
-    }
+  const handleTransactionCreated = (budgetId) => {
+    showAlert('Éxito', 'Transacción registrada correctamente');
   };
 
-  const handleTransactionUpdated = async (budgetId) => {
-    try {
-      const updatedTransactions = await getBudgetTransactions(budgetId);
-      const budget = sharedBudgets.find(b => b.id === budgetId);
-      const budgetName = budget ? budget.name : '';
-      
-      const transactionsWithId = updatedTransactions.map(t => ({ 
-        ...t, 
-        budgetId,
-        budgetName
-      }));
-      
-      setTransactions({
-        ...transactions,
-        [budgetId]: transactionsWithId
-      });
-      
-      showAlert('Éxito', 'Transacción actualizada correctamente');
-    } catch (error) {
-      console.error('Error al actualizar transacciones', error);
-    }
+  const handleTransactionUpdated = (budgetId) => {
+    showAlert('Éxito', 'Transacción actualizada correctamente');
   };
 
   const calculateBudgetStats = (budgetId) => {
@@ -463,12 +421,12 @@ export default function SharedBudgets() {
           </BudgetGrid>
           
           {/* Mostrar lista de transacciones recientes de presupuestos compartidos */}
-          {Object.keys(transactions).length > 0 && (
+          {sharedBudgets.length > 0 && (
             <div>
               <h2 style={{ margin: '24px 0 16px', color: '#1e293b' }}>Actividad Reciente</h2>
               <TransactionList 
-                transactions={Object.values(transactions)
-                  .flat()
+                transactions={sharedBudgets
+                  .flatMap(budget => transactions[budget.id] || [])
                   .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
                 }
                 onEdit={handleEditTransaction}

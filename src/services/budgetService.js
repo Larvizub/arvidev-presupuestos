@@ -1,4 +1,4 @@
-import { ref, set, get, push, remove, update, query, orderByChild, equalTo } from 'firebase/database';
+import { ref, set, get, push, remove, update, query, orderByChild, equalTo, onValue } from 'firebase/database';
 import { database } from '../firebase/config';
 import { validateBudget, sanitizeData } from './validationService';
 
@@ -47,41 +47,102 @@ export const createBudget = async (userId, budgetData) => {
 
 // Obtener presupuestos del usuario
 export const getUserBudgets = async (userId) => {
+  try {
+    const resultsMap = {};
+
+    // 1) Intentar usar el índice userBudgets
+    try {
+      const userBudgetsRef = ref(database, `userBudgets/${userId}`);
+      const snapshot = await get(userBudgetsRef);
+      if (snapshot.exists()) {
+        const budgetIds = Object.keys(snapshot.val());
+        await Promise.all(budgetIds.map(async id => {
+          try {
+            const snap = await get(ref(database, `budgets/${id}`));
+            if (snap.exists()) resultsMap[id] = snap.val();
+          } catch (err) {
+            console.warn(`Error fetching budget ${id} from budgets/:`, err && err.code, err && err.message);
+          }
+        }));
+      }
+    } catch (err) {
+      console.warn('No se pudo leer userBudgets (posible regla), intentar fallback:', err && err.code, err && err.message);
+    }
+
+    // 2) Fallback: presupuestos donde el usuario es owner
+    try {
+      const ownerQuery = query(ref(database, 'budgets'), orderByChild('ownerId'), equalTo(userId));
+      const ownerSnap = await get(ownerQuery);
+      if (ownerSnap.exists()) {
+        Object.entries(ownerSnap.val()).forEach(([id, val]) => { resultsMap[id] = val; });
+      }
+    } catch (err) {
+      console.warn('Error querying budgets by ownerId:', err && err.code, err && err.message);
+    }
+
+    // 3) Fallback: presupuestos compartidos con el usuario (sharedWith/<uid> == true)
+    try {
+      const sharedQuery = query(ref(database, 'budgets'), orderByChild(`sharedWith/${userId}`), equalTo(true));
+      const sharedSnap = await get(sharedQuery);
+      if (sharedSnap.exists()) {
+        Object.entries(sharedSnap.val()).forEach(([id, val]) => { resultsMap[id] = val; });
+      }
+    } catch (err) {
+      console.warn('Error querying budgets by sharedWith:', err && err.code, err && err.message);
+    }
+
+    // Devolver array único de presupuestos
+    return Object.values(resultsMap);
+  } catch (error) {
+    console.error('Error in getUserBudgets:', error && error.code, error && error.message, error);
+    throw error;
+  }
+};
+
+// Suscribirse a los presupuestos del usuario (Tiempo Real)
+export const subscribeToUserBudgets = (userId, callback) => {
   const userBudgetsRef = ref(database, `userBudgets/${userId}`);
-  const snapshot = await get(userBudgetsRef);
   
-  if (!snapshot.exists()) return [];
-  
-  const budgetIds = Object.keys(snapshot.val());
-  const budgetsPromises = budgetIds.map(id => 
-    get(ref(database, `budgets/${id}`)).then(snap => snap.val())
-  );
-  
-  return Promise.all(budgetsPromises);
+  return onValue(userBudgetsRef, async (snapshot) => {
+    try {
+      if (snapshot.exists()) {
+        const budgetIds = Object.keys(snapshot.val());
+        const budgets = await Promise.all(budgetIds.map(async id => {
+          const snap = await get(ref(database, `budgets/${id}`));
+          return snap.exists() ? snap.val() : null;
+        }));
+        callback(budgets.filter(b => b !== null));
+      } else {
+        // Fallback si no hay nada en userBudgets, intentar buscar por ownerId
+        const ownerQuery = query(ref(database, 'budgets'), orderByChild('ownerId'), equalTo(userId));
+        const ownerSnap = await get(ownerQuery);
+        if (ownerSnap.exists()) {
+          callback(Object.values(ownerSnap.val()));
+        } else {
+          callback([]);
+        }
+      }
+    } catch (error) {
+      console.error("Error in subscribeToUserBudgets:", error);
+      callback([]);
+    }
+  });
 };
 
 // Obtener presupuestos del usuario para un mes específico
 export const getUserBudgetsByMonth = async (userId, month, year) => {
-  const userBudgetsRef = ref(database, `userBudgets/${userId}`);
-  const snapshot = await get(userBudgetsRef);
-  
-  if (!snapshot.exists()) return [];
-  
-  const budgetIds = Object.keys(snapshot.val());
-  const budgetsPromises = budgetIds.map(id => 
-    get(ref(database, `budgets/${id}`)).then(snap => snap.val())
-  );
-  
-  const allBudgets = await Promise.all(budgetsPromises);
-  
-  // Filtrar por mes y año si se especifican
-  if (month !== undefined && year !== undefined) {
-    return allBudgets.filter(budget => 
-      budget.month === month && budget.year === year
-    );
+  try {
+    const allBudgets = await getUserBudgets(userId);
+
+    if (month !== undefined && year !== undefined) {
+      return allBudgets.filter(budget => budget.month === month && budget.year === year);
+    }
+
+    return allBudgets;
+  } catch (error) {
+    console.error('Error in getUserBudgetsByMonth:', error && error.code, error && error.message, error);
+    throw error;
   }
-  
-  return allBudgets;
 };
 
 // Actualizar presupuesto
@@ -112,7 +173,13 @@ export const shareBudgetWithUser = async (budgetId, userEmail, currentUserId) =>
   // Primero buscar usuario por email
   const normalizedEmail = userEmail.toLowerCase().trim();
   const usersRef = query(ref(database, 'users'), orderByChild('email'), equalTo(normalizedEmail));
-  const snapshot = await get(usersRef);
+  let snapshot;
+  try {
+    snapshot = await get(usersRef);
+  } catch (err) {
+    console.error('Error querying users by email:', err && err.code, err && err.message, err);
+    throw err;
+  }
   
   if (!snapshot.exists()) {
     throw new Error('Usuario no encontrado');
@@ -127,14 +194,44 @@ export const shareBudgetWithUser = async (budgetId, userEmail, currentUserId) =>
   
   // Verificar si ya está compartido
   if (budget.sharedWith && budget.sharedWith[userId]) {
-    throw new Error('El presupuesto ya está compartido con este usuario');
+    // Si ya existe en sharedWith, asegurarse de que la referencia en userBudgets también exista.
+    try {
+      const userBudgetRef = ref(database, `userBudgets/${userId}/${budgetId}`);
+      const existingRef = await get(userBudgetRef);
+      if (!existingRef.exists()) {
+        await set(userBudgetRef, true);
+      }
+      // Devolver true; la operación es idempotente.
+      return true;
+    } catch (err) {
+      console.warn('SharedWith existe pero fallo al asegurar userBudgets ref:', err && err.code, err && err.message);
+      throw new Error('El presupuesto ya está compartido con este usuario');
+    }
   }
   
-  // Añadir usuario a sharedWith
-  await set(ref(database, `budgets/${budgetId}/sharedWith/${userId}`), true);
-  
-  // Añadir referencia al usuario
-  await set(ref(database, `userBudgets/${userId}/${budgetId}`), true);
+  // Intentar escribir ambas rutas en una sola operación atómica (mejor diagnóstico de permisos)
+  const updates = {};
+  updates[`/budgets/${budgetId}/sharedWith/${userId}`] = true;
+  updates[`/userBudgets/${userId}/${budgetId}`] = true;
+  try {
+    await update(ref(database), updates);
+  } catch (err) {
+    console.error('Error writing sharedWith/userBudgets atomically:', err && err.code, err && err.message, err);
+    // Intentar escritura individual para dar mensajes más claros
+    try {
+      await set(ref(database, `budgets/${budgetId}/sharedWith/${userId}`), true);
+    } catch (e1) {
+      console.error('Failed to write budgets/sharedWith:', e1 && e1.code, e1 && e1.message, e1);
+      throw new Error('No se pudo compartir (escritura a budgets/sharedWith falló)');
+    }
+
+    try {
+      await set(ref(database, `userBudgets/${userId}/${budgetId}`), true);
+    } catch (e2) {
+      console.error('Failed to write userBudgets ref:', e2 && e2.code, e2 && e2.message, e2);
+      throw new Error('No se pudo compartir (escritura a userBudgets falló)');
+    }
+  }
   
   // Registrar la acción para auditoría
   await push(ref(database, `userActivity/${currentUserId}`), {

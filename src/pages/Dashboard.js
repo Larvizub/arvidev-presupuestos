@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { getUserBudgets, deleteBudget } from '../services/budgetService';
-import { getBudgetTransactions, deleteTransaction } from '../services/transactionService';
+import { subscribeToUserBudgets, deleteBudget } from '../services/budgetService';
+import { subscribeToBudgetTransactions, deleteTransaction } from '../services/transactionService';
 import styled from 'styled-components';
 import { FaChartPie, FaWallet, FaArrowUp, FaArrowDown, FaTrash, FaShare, FaEdit } from 'react-icons/fa';
 import ActionButtons from '../components/dashboard/ActionButtons';
@@ -271,47 +271,45 @@ export default function Dashboard() {
   }, 0);
 
   useEffect(() => {
-    const fetchBudgets = async () => {
-      if (currentUser) {
-        try {
-          setIsLoading(true);
-          // Obtener todos los presupuestos
-          const userBudgets = await getUserBudgets(currentUser.uid);
-          
-          // Filtrar por mes/año seleccionado
-          const filteredBudgets = userBudgets.filter(budget => 
-            budget.month === selectedMonth && budget.year === selectedYear
-          );
-          
-          setBudgets(showAllBudgets ? userBudgets : filteredBudgets);
-          
-          // Obtener transacciones para cada presupuesto
-          const transactionsData = {};
-          const budgetsToProcess = showAllBudgets ? userBudgets : filteredBudgets;
-          
-          for (const budget of budgetsToProcess) {
-            const budgetTransactions = await getBudgetTransactions(budget.id);
-            // Inyectar budgetId y budgetName en cada transacción
-            transactionsData[budget.id] = budgetTransactions.map(t => ({ 
-              ...t, 
-              budgetId: budget.id,
-              budgetName: budget.name 
-            }));
-          }
-          setTransactions(transactionsData);
-        } catch (error) {
-          console.error('Error al obtener presupuestos', error);
-        } finally {
-          // Añadir un pequeño retraso para evitar parpadeos durante cargas rápidas
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 300);
-        }
-      }
-    };
-    
-    fetchBudgets();
+    let unsubscribeBudgets = () => {};
+
+    if (currentUser) {
+      setIsLoading(true);
+      unsubscribeBudgets = subscribeToUserBudgets(currentUser.uid, (userBudgets) => {
+        // Filtrar por mes/año seleccionado si no se muestran todos
+        const filteredBudgets = userBudgets.filter(budget => 
+          budget.month === selectedMonth && budget.year === selectedYear
+        );
+        
+        setBudgets(showAllBudgets ? userBudgets : filteredBudgets);
+        setIsLoading(false);
+      });
+    }
+
+    return () => unsubscribeBudgets();
   }, [currentUser, selectedMonth, selectedYear, showAllBudgets]);
+
+  useEffect(() => {
+    const unsubscribers = [];
+    
+    budgets.forEach(budget => {
+      const unsub = subscribeToBudgetTransactions(budget.id, (budgetTransactions) => {
+        setTransactions(prev => ({
+          ...prev,
+          [budget.id]: budgetTransactions.map(t => ({
+            ...t,
+            budgetId: budget.id,
+            budgetName: budget.name
+          }))
+        }));
+      });
+      unsubscribers.push(unsub);
+    });
+
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, [budgets]);
 
   const handleMonthYearChange = (month, year) => {
     setSelectedMonth(month);
@@ -332,50 +330,22 @@ export default function Dashboard() {
     setShowModal(false);
   };
 
-  const handleBudgetCreated = async () => {
-    try {
-      const userBudgets = await getUserBudgets(currentUser.uid);
-      setBudgets(userBudgets);
-    } catch (error) {
-      console.error('Error al actualizar presupuestos', error);
-    }
+  const handleBudgetCreated = () => {
+    // El listener se encargará de actualizar la lista
+    showAlert('Éxito', 'Presupuesto creado correctamente');
   };
 
-  const handleBudgetUpdated = async () => {
-    try {
-      const userBudgets = await getUserBudgets(currentUser.uid);
-      // Aplicar el mismo filtrado que en el useEffect
-      const filteredBudgets = userBudgets.filter(budget => 
-        budget.month === selectedMonth && budget.year === selectedYear
-      );
-      setBudgets(showAllBudgets ? userBudgets : filteredBudgets);
-      showAlert('Éxito', 'Presupuesto actualizado correctamente');
-    } catch (error) {
-      console.error('Error al actualizar presupuestos', error);
-    }
+  const handleBudgetUpdated = () => {
+    // El listener se encargará de actualizar la lista
+    showAlert('Éxito', 'Presupuesto actualizado correctamente');
   };
 
-  const handleTransactionCreated = async (budgetId) => {
-    try {
-      const updatedTransactions = await getBudgetTransactions(budgetId);
-      // Obtener nombre del presupuesto
-      const budget = budgets.find(b => b.id === budgetId);
-      const budgetName = budget ? budget.name : '';
-      
-      // Inyectar budgetId y budgetName
-      const transactionsWithId = updatedTransactions.map(t => ({ 
-        ...t, 
-        budgetId,
-        budgetName
-      }));
-      
-      setTransactions({
-        ...transactions,
-        [budgetId]: transactionsWithId
-      });
-    } catch (error) {
-      console.error('Error al actualizar transacciones', error);
-    }
+  const handleTransactionCreated = (budgetId) => {
+    showAlert('Éxito', 'Transacción registrada correctamente');
+  };
+
+  const handleTransactionUpdated = (budgetId) => {
+    showAlert('Éxito', 'Transacción actualizada correctamente');
   };
 
   const calculateBudgetStats = (budgetId) => {
@@ -399,20 +369,6 @@ export default function Dashboard() {
         try {
           setIsLoading(true);
           await deleteBudget(budgetId, currentUser.uid);
-          
-          // Actualizar la lista de presupuestos
-          const userBudgets = await getUserBudgets(currentUser.uid);
-          const filteredBudgets = userBudgets.filter(budget => 
-            budget.month === selectedMonth && budget.year === selectedYear
-          );
-          
-          setBudgets(showAllBudgets ? userBudgets : filteredBudgets);
-          
-          // Eliminar las transacciones del presupuesto eliminado
-          const updatedTransactions = { ...transactions };
-          delete updatedTransactions[budgetId];
-          setTransactions(updatedTransactions);
-          
           showAlert('Éxito', 'Presupuesto eliminado correctamente');
         } catch (error) {
           console.error('Error al eliminar el presupuesto', error);
@@ -465,25 +421,6 @@ export default function Dashboard() {
       async () => {
         try {
           await deleteTransaction(budgetId, transactionId, currentUser.uid);
-          
-          // Actualizar transacciones
-          const updatedTransactions = await getBudgetTransactions(budgetId);
-          // Obtener nombre del presupuesto
-          const budget = budgets.find(b => b.id === budgetId);
-          const budgetName = budget ? budget.name : '';
-          
-          // Inyectar budgetId y budgetName
-          const transactionsWithId = updatedTransactions.map(t => ({ 
-            ...t, 
-            budgetId,
-            budgetName
-          }));
-          
-          setTransactions({
-            ...transactions,
-            [budgetId]: transactionsWithId
-          });
-          
           showAlert('Éxito', 'Transacción eliminada correctamente');
         } catch (error) {
           console.error('Error al eliminar la transacción', error);
@@ -493,29 +430,6 @@ export default function Dashboard() {
     );
   };
   
-  const handleTransactionUpdated = async (budgetId) => {
-    try {
-      const updatedTransactions = await getBudgetTransactions(budgetId);
-      // Obtener nombre del presupuesto
-      const budget = budgets.find(b => b.id === budgetId);
-      const budgetName = budget ? budget.name : '';
-      
-      // Inyectar budgetId y budgetName
-      const transactionsWithId = updatedTransactions.map(t => ({ 
-        ...t, 
-        budgetId,
-        budgetName
-      }));
-      
-      setTransactions({
-        ...transactions,
-        [budgetId]: transactionsWithId
-      });
-    } catch (error) {
-      console.error('Error al actualizar transacciones', error);
-    }
-  };
-
   if (isLoading) {
     return (
       <DashboardContainer>
@@ -680,12 +594,12 @@ export default function Dashboard() {
           </BudgetGrid>
           
           {/* Mostrar lista de transacciones recientes */}
-          {Object.keys(transactions).length > 0 && (
+          {budgets.length > 0 && (
             <div>
               <h2 style={{ margin: '24px 0 16px', color: '#1e293b' }}>Transacciones Recientes</h2>
               <TransactionList 
-                transactions={Object.values(transactions)
-                  .flat()
+                transactions={budgets
+                  .flatMap(budget => transactions[budget.id] || [])
                   .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
                 }
                 onEdit={handleEditTransaction}
