@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { shareBudgetWithUser } from '../../services/budgetService';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import styled from 'styled-components';
 import { FaShare, FaTimes, FaEnvelope } from 'react-icons/fa';
 
@@ -149,6 +150,7 @@ const ShareIcon = styled.div`
 
 export default function ShareBudgetForm({ budgetId, budgetName, onClose }) {
   const { showAlert } = useNotification();
+  const { currentUser } = useAuth();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -161,12 +163,16 @@ export default function ShareBudgetForm({ budgetId, budgetName, onClose }) {
       return setError('El correo electrónico es obligatorio');
     }
     
+    if (!currentUser) {
+      return setError('Debes estar autenticado para compartir presupuestos');
+    }
+    
     try {
       setError('');
       setSuccess('');
       setLoading(true);
       
-      await shareBudgetWithUser(budgetId, email);
+      await shareBudgetWithUser(budgetId, email, currentUser.uid);
       
       setSuccess(`Presupuesto compartido exitosamente con ${email}`);
       setEmail('');

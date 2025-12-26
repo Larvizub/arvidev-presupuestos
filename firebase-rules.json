@@ -1,15 +1,18 @@
 {
   "rules": {
     "users": {
+      ".read": "auth !== null",
+      ".indexOn": ["email"],
       "$uid": {
-        ".read": "$uid === auth.uid",
         ".write": "$uid === auth.uid"
       }
     },
     "userBudgets": {
       "$uid": {
         ".read": "$uid === auth.uid",
-        ".write": "$uid === auth.uid"
+        "$budgetId": {
+          ".write": "$uid === auth.uid || root.child('budgets').child($budgetId).child('ownerId').val() === auth.uid || root.child('budgets').child($budgetId).child('sharedWith').child(auth.uid).exists()"
+        }
       }
     },
     "budgets": {
@@ -18,7 +21,7 @@
         ".write": "!data.exists() || data.child('ownerId').val() === auth.uid",
         "sharedWith": {
           "$sharedUid": {
-            ".write": "auth.uid === data.parent().child('ownerId').val()"
+            ".write": "auth.uid === root.child('budgets').child($budgetId).child('ownerId').val() || root.child('budgets').child($budgetId).child('sharedWith').child(auth.uid).exists()"
           }
         }
       }
@@ -30,6 +33,12 @@
         "$transactionId": {
           ".validate": "newData.hasChild('userId') && newData.child('userId').val() === auth.uid"
         }
+      }
+    },
+    "userActivity": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
       }
     }
   }

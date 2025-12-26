@@ -91,19 +91,27 @@ export const updateBudget = async (budgetId, budgetData) => {
 
 // Compartir presupuesto con otro usuario
 export const shareBudgetWithUser = async (budgetId, userEmail, currentUserId) => {
-  // Verificar que el usuario actual sea el propietario
+  if (!currentUserId) {
+    throw new Error('Usuario no autenticado');
+  }
+
+  // Verificar que el usuario actual tenga permiso (dueño o ya compartido con él)
   const budgetSnapshot = await get(ref(database, `budgets/${budgetId}`));
   if (!budgetSnapshot.exists()) {
     throw new Error('Presupuesto no encontrado');
   }
   
   const budget = budgetSnapshot.val();
-  if (budget.ownerId !== currentUserId) {
+  const isOwner = budget.ownerId === currentUserId;
+  const isSharedWithMe = budget.sharedWith && budget.sharedWith[currentUserId];
+
+  if (!isOwner && !isSharedWithMe) {
     throw new Error('No tienes permiso para compartir este presupuesto');
   }
   
   // Primero buscar usuario por email
-  const usersRef = query(ref(database, 'users'), orderByChild('email'), equalTo(userEmail));
+  const normalizedEmail = userEmail.toLowerCase().trim();
+  const usersRef = query(ref(database, 'users'), orderByChild('email'), equalTo(normalizedEmail));
   const snapshot = await get(usersRef);
   
   if (!snapshot.exists()) {
